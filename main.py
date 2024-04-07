@@ -1,38 +1,69 @@
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+#!/usr/bin/env python
+# pylint: disable=unused-argument
+# This program is dedicated to the public domain under the CC0 license.
 
-# Define a command handler for the '/start' command
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text('Welcome to the Patient Assignment Bot. Please enter your name.')
+"""
+Simple example of a Telegram WebApp which displays a color picker.
+The static website for this website is hosted by the PTB team for your convenience.
+Currently only showcases starting the WebApp via a KeyboardButton, as all other methods would
+require a bot token.
+"""
+import json
+import logging
 
-# Define a message handler for the patient's name
-def handle_name(update: Update, context: CallbackContext):
-    # Store the patient's name and ask for the problem description
-    context.user_data['name'] = update.message.text
-    update.message.reply_text('Thank you. Now, please describe your problem.')
+from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update, WebAppInfo
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-# Define a message handler for the problem description
-def handle_problem(update: Update, context: CallbackContext):
-    # Store the problem description and confirm the registration
-    context.user_data['problem'] = update.message.text
-    update.message.reply_text('Your problem has been recorded. You will be assigned to a doctor shortly.')
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+# set higher logging level for httpx to avoid all GET and POST requests being logged
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# Main function to tie the commands and start the bot
-def main():
-    # Create the Updater and pass it your bot's token
-    updater = Updater("YOUR_TELEGRAM_BOT_TOKEN", use_context=True)
+logger = logging.getLogger(__name__)
 
-    # Get the dispatcher to register handlers
-    dp = updater.dispatcher
 
-    # Register the command handlers
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_name, pass_user_data=True))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_problem, pass_user_data=True))
+# Define a `/start` command handler.
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a message with a button that opens a the web app."""
+    await update.message.reply_text(
+        "Please press the button below to choose a color via the WebApp.",
+        reply_markup=ReplyKeyboardMarkup.from_button(
+            KeyboardButton(
+                text="Open the color picker!",
+                web_app=WebAppInfo(url="https://python-telegram-bot.org/static/webappbot"),
+            )
+        ),
+    )
 
-    # Start the Bot
-    updater.start_polling()
-    updater.idle()
 
-if name == '__main__':
+# Handle incoming WebAppData
+async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Print the received data and remove the button."""
+    # Here we use `json.loads`, since the WebApp sends the data JSON serialized string
+    # (see webappbot.html)
+    data = json.loads(update.effective_message.web_app_data.data)
+    await update.message.reply_html(
+        text=(
+            f"You selected the color with the HEX value <code>{data['hex']}</code>. The "
+            f"corresponding RGB value is <code>{tuple(data['rgb'].values())}</code>."
+        ),
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+
+def main() -> None:
+    """Start the bot."""
+    # Create the Application and pass it your bot's token.
+    application = Application.builder().token("6604759188:AAHd9zN8LsQQPKL_MTRev4ThumD60ZFxm_s").build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
+
+    # Run the bot until the user presses Ctrl-C
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
     main()
