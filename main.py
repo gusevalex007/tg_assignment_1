@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message with a button that opens a the web app."""
     await update.message.reply_text(
-        "Please press the button below to choose a color via the WebApp.",
+        "Сообщить о яме на дороге",
         reply_markup=ReplyKeyboardMarkup.from_button(
             KeyboardButton(
-                text="Open the color picker!",
-                web_app=WebAppInfo(url="https://python-telegram-bot.org/static/webappbot"),
+                text="Включить камеру",
+                web_app=WebAppInfo(url="https://gusevalex007.github.io/tg_pay_bot1/"),
             )
         ),
     )
